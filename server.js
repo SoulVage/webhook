@@ -9,7 +9,14 @@ app.use(bodyParser.json());
 
 // آرایه برای ذخیره پیام‌ها
 let messages = [];
-
+// قبل از route ها
+app.use((req, res, next) => {
+    res.header("Access-Control-Allow-Origin", "*"); // اجازه دادن به همه اوریجین‌ها
+    res.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type");
+    next();
+  });
+  
 // مسیر POST برای Webhook تلگرام
 app.post("/telegram_webhook", (req, res) => {
   console.log("New Telegram Message:", req.body);
