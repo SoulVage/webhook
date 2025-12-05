@@ -8,10 +8,8 @@ dotenv.config();
 const app = express();
 app.use(bodyParser.json());
 
-// آرایه برای ذخیره پیام‌ها
 let messages = [];
 
-// قبل از route ها: فعال کردن CORS
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
@@ -19,49 +17,40 @@ app.use((req, res, next) => {
   next();
 });
 
-// تنظیم OpenAI
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// تنظیم Gemini via OpenAI–compatible SDK
+const openai = new OpenAI({
+  apiKey: process.env.GEMINI_API_KEY,  // استفاده از کلید Gemini
+  baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/"
+});
 
-// تابع برای تمیز کردن تکالیف و ساخت HTML
 async function cleanHomework(text) {
   try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+    const resp = await openai.chat.completions.create({
+      model: "gemini-2.5-flash",
       messages: [
         {
           role: "system",
-          content: "You are an assistant that ONLY outputs HTML. Format the homework nicely using <div> with class names, do NOT write anything else outside HTML."
+          content: "You are an assistant that ONLY outputs HTML. Format the homework nicely using <div> and CSS classes. Do NOT output anything else outside HTML."
         },
         { role: "user", content: text }
       ],
-      max_tokens: 1500
+      reasoning_effort: "low"  // یا مقدار مناسب
     });
-    return response.choices[0].message.content;
+    return resp.choices[0].message.content;
   } catch (err) {
-    console.error("OpenAI Error:", err);
+    console.error("Gemini Error:", err);
     return "<div>خطا در پردازش تکالیف</div>";
   }
 }
 
-// مسیر POST برای Webhook تلگرام
 app.post("/telegram_webhook", async (req, res) => {
   if (req.body.message && req.body.message.text) {
     const text = req.body.message.text;
-
-    // فقط پیام‌هایی که شامل "تکالیف" هستند
     if (text.includes("تکالیف")) {
       console.log("Text:", text);
-
-      // گرفتن HTML از AI
       const html = await cleanHomework(text);
-      console.log("HTML Generated:", html);
-
-      messages.push({
-        id: req.body.message.message_id,
-        text,
-        html,
-        date: req.body.message.date
-      });
+      console.log("HTML from Gemini:", html);
+      messages.push({ id: req.body.message.message_id, text, html, date: req.body.message.date });
     } else {
       console.log("پیام شامل 'تکالیف' نیست، ذخیره نمی‌شود.");
     }
@@ -69,13 +58,9 @@ app.post("/telegram_webhook", async (req, res) => {
   res.sendStatus(200);
 });
 
-// مسیر GET برای فرانت‌اند
 app.get("/messages", (req, res) => {
   res.json(messages);
 });
 
-// پورت Render
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log("Server running on port " + PORT);
-});
+app.listen(PORT, () => console.log("Server listening on port", PORT));
