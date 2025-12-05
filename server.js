@@ -10,7 +10,6 @@ app.use(bodyParser.json());
 app.post("/telegram_webhook", (req, res) => {
   console.log("New Telegram Message:", req.body);
 
-  // اگر پیام متنی باشد
   if (req.body.message) {
     console.log("Text:", req.body.message.text);
   }
@@ -18,6 +17,8 @@ app.post("/telegram_webhook", (req, res) => {
   res.sendStatus(200);
 });
 
-app.listen(3000, () => {
-  console.log("Server running on port 3000");
+// ❗ مهم برای Render
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log("Server running on port " + PORT);
 });
