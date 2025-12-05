@@ -1,6 +1,7 @@
 import express from "express";
 import bodyParser from "body-parser";
 import dotenv from "dotenv";
+import OpenAI from "openai";
 
 dotenv.config();
 
@@ -18,27 +19,52 @@ app.use((req, res, next) => {
   next();
 });
 
-// مسیر POST برای Webhook تلگرام
-app.post("/telegram_webhook", (req, res) => {
-  console.log("New Telegram Message:", req.body);
+// تنظیم OpenAI
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+// تابع برای تمیز کردن تکالیف و ساخت HTML
+async function cleanHomework(text) {
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        {
+          role: "system",
+          content: "You are an assistant that formats homework nicely in HTML using <div> and CSS classes."
+        },
+        { role: "user", content: text }
+      ],
+      max_tokens: 500
+    });
+    return response.choices[0].message.content;
+  } catch (err) {
+    console.error("OpenAI Error:", err);
+    return "<div>خطا در پردازش تکالیف</div>";
+  }
+}
+
+// مسیر POST برای Webhook تلگرام
+app.post("/telegram_webhook", async (req, res) => {
   if (req.body.message && req.body.message.text) {
     const text = req.body.message.text;
 
-    // فقط پیام‌هایی که شامل "تکالیف" هستند ذخیره شوند
+    // فقط پیام‌هایی که شامل "تکالیف" هستند
     if (text.includes("تکالیف")) {
       console.log("Text:", text);
 
+      // گرفتن HTML از AI
+      const html = await cleanHomework(text);
+
       messages.push({
         id: req.body.message.message_id,
-        text: text,
+        text,
+        html,
         date: req.body.message.date
       });
     } else {
       console.log("پیام شامل 'تکالیف' نیست، ذخیره نمی‌شود.");
     }
   }
-
   res.sendStatus(200);
 });
 
