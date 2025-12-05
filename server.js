@@ -13,7 +13,7 @@ let messages = [];
 
 // قبل از route ها: فعال کردن CORS
 app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*"); // اجازه دادن به همه اوریجین‌ها
+  res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   res.header("Access-Control-Allow-Headers", "Content-Type");
   next();
@@ -30,11 +30,11 @@ async function cleanHomework(text) {
       messages: [
         {
           role: "system",
-          content: "You are an assistant that formats homework nicely in HTML using <div> and CSS classes."
+          content: "You are an assistant that ONLY outputs HTML. Format the homework nicely using <div> with class names, do NOT write anything else outside HTML."
         },
         { role: "user", content: text }
       ],
-      max_tokens: 500
+      max_tokens: 1500
     });
     return response.choices[0].message.content;
   } catch (err) {
@@ -54,6 +54,7 @@ app.post("/telegram_webhook", async (req, res) => {
 
       // گرفتن HTML از AI
       const html = await cleanHomework(text);
+      console.log("HTML Generated:", html);
 
       messages.push({
         id: req.body.message.message_id,
